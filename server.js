@@ -9,5 +9,5 @@ const app = express();
 app.use(morgan('combined'));
 app.all('/{*splat}', (req, res) => res.send(MESSAGE));
 
-// HOST is only advertised in the startup line; app.listen omits it to keep the original all-interfaces bind.
-app.listen(PORT, () => console.log(`Server running at http://${HOST}:${PORT}/`));
+// HOST is only advertised in the startup line; app.listen omits it to keep the original all-interfaces bind, and omits a callback because Express 5 would route a bind error to it instead of crashing.
+app.listen(PORT).once('listening', () => console.log(`Server running at http://${HOST}:${PORT}/`));

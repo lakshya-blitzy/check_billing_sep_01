@@ -26,10 +26,10 @@ server.on('error', (err) => {
   console.error('Server error:', err.message);
   process.exitCode = 1;
 });
-
+server.on('connect', (req, socket) => socket.on('error', () => socket.destroy()).resume().end('HTTP/1.1 405 Method Not Allowed\r\nAllow: GET, HEAD\r\nContent-Length: 0\r\nConnection: close\r\n\r\n', () => socket.destroy()));
+server.on('checkExpectation', (req, res) => (req.method !== 'GET' && req.method !== 'HEAD') ? server.emit('request', req, res) : res.writeHead(417).end());
 process.on('SIGTERM', () => stopServer('SIGTERM'));
 process.on('SIGINT', () => stopServer('SIGINT'));
 process.on('uncaughtException', fatal('uncaught exception'));
 process.on('unhandledRejection', fatal('unhandled rejection'));
-
 server.listen(3000, () => console.log('Server running at http://127.0.0.1:3000/'));

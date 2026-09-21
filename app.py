@@ -21,6 +21,38 @@ def hello(path):
 
 app.view_functions["hello"] = hello
 
+
+# Werkzeug's `path` converter matches slashes but not a line feed. Its regex
+# is `[^/].*?`, which a rule compiles into `(?P<__werkzeug_0>[^/].*?)\Z` and
+# the routing matcher applies with a plain `re.compile(...).match(...)` —
+# never with DOTALL — so `.` excludes 0x0A. A percent-decoded LF anywhere
+# past the first character of the path therefore matched neither rule below
+# and Werkzeug raised NotFound: `/a%0ab`, `/a%0a`, `/a%0ab/c`, `/x/y%0az`,
+# `/%0a%0a`, `/a%0d%0ab` and every other such shape were answered with a 404
+# and an HTML error body, for every verb, where Node answers 200 with the
+# 14-byte payload. `[\s\S]` is `.` plus the line feed, so widening the
+# trailing class restores the every-path contract without narrowing anything:
+# the class is a strict superset of the one it replaces, every path that
+# matched before still matches, the first character stays non-slash, and the
+# `/` rule below is therefore still required for the empty path.
+#
+# Subclassing the converter this map already holds keeps the file to its one
+# import, and registering the subclass under the name the rule already uses
+# keeps the routing table to the two declared rules. This is the same kind of
+# framework-default reconciliation as `static_folder=None` above, not added
+# behavior: no handler, no error page and no configuration surface appears,
+# and a default that contradicted the stated contract stops deciding which
+# paths the ported view sees. The registration must precede the `add` calls
+# below, because a rule resolves its converters when the map compiles it.
+class _AnyPathConverter(app.url_map.converters["path"]):
+    regex = r"[^/][\s\S]*?"
+    # Carried over from the base converter rather than inferred: the regex
+    # spans slashes, so one rule consumes every remaining path segment.
+    part_isolating = False
+
+
+app.url_map.converters["path"] = _AnyPathConverter
+
 # The rule for the root URL. A second rule for "/" is structurally required:
 # the `path` converter's pattern requires a non-slash first character, so it
 # cannot match the empty string and `/<path:path>` alone would leave the root
@@ -69,4 +101,27 @@ if __name__ == "__main__":
     # editing the ambient values, or bypassing this call for a lower-level
     # Werkzeug entry point — are both prohibited for this file, so the
     # limit is recorded here rather than closed.
+    #
+    # Four further differences from the Node reference belong to the server
+    # this call selects rather than to the application, and each was measured
+    # against the source: a malformed request line is answered by the
+    # standard library's pre-dispatch error path with a 400 whose body and
+    # reason phrase carry the request line back (Node sends a bodiless 400);
+    # `HTTP/9.9` and HTTP/0.9 requests are answered with no status line,
+    # because that path treats the request as HTTP/0.9 and suppresses the
+    # status line and headers (Node answers both with a well-formed
+    # response); every response carries `Server: Werkzeug/... Python/...`
+    # (Node sends no `Server` header); and conflicting `Content-Length` with
+    # `Transfer-Encoding: chunked` is accepted rather than rejected, though
+    # no second response is emitted and the smuggled request is never
+    # processed (Node rejects the framing with a 400). All four are decided
+    # before or outside WSGI dispatch, so the view cannot reach them; the
+    # only levers are a request-handler subclass, which would need a second
+    # import and error-handling code, or a production server or proxy in
+    # front — an added dependency. The plan excludes every one of those
+    # (§0.2.2 no error handler of any kind and no security hardening; §0.6.1
+    # and §0.6.2 one dependency and one import; §0.5.2 accepts the
+    # framework's own response headers and adds no code to suppress them),
+    # so they are recorded here and closed by an operator fronting the
+    # service, not by this file.
     app.run(host="::", port=3000, debug=False)

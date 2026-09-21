@@ -97,31 +97,87 @@ if __name__ == "__main__":
     # server reads it before any argument given here, then expects to
     # inherit the listener that parent had already bound, so with the
     # marker present and no such parent it raises instead of binding.
-    # No argument reaches that read, and the two changes that would —
-    # editing the ambient values, or bypassing this call for a lower-level
-    # Werkzeug entry point — are both prohibited for this file, so the
-    # limit is recorded here rather than closed.
+    # Re-measured: the line above is already out when that happens, the
+    # process then exits non-zero with nothing bound, and Node serves
+    # normally under the same variable. `use_reloader=False` does not
+    # help either — the read sits ahead of the reloader check that
+    # argument reaches. No argument reaches that read, and the two
+    # changes that would — editing the ambient values, or bypassing this
+    # call for a lower-level Werkzeug entry point — are both prohibited
+    # for this file (§0.2.2 excludes environment-variable configuration,
+    # §0.3.1 fixes the statements this file holds), so the limit is
+    # recorded here rather than closed: this process is started with no
+    # WERKZEUG_RUN_MAIN in its environment.
     #
-    # Four further differences from the Node reference belong to the server
-    # this call selects rather than to the application, and each was measured
-    # against the source: a malformed request line is answered by the
-    # standard library's pre-dispatch error path with a 400 whose body and
-    # reason phrase carry the request line back (Node sends a bodiless 400);
-    # `HTTP/9.9` and HTTP/0.9 requests are answered with no status line,
-    # because that path treats the request as HTTP/0.9 and suppresses the
-    # status line and headers (Node answers both with a well-formed
-    # response); every response carries `Server: Werkzeug/... Python/...`
-    # (Node sends no `Server` header); and conflicting `Content-Length` with
-    # `Transfer-Encoding: chunked` is accepted rather than rejected, though
-    # no second response is emitted and the smuggled request is never
-    # processed (Node rejects the framing with a 400). All four are decided
-    # before or outside WSGI dispatch, so the view cannot reach them; the
-    # only levers are a request-handler subclass, which would need a second
-    # import and error-handling code, or a production server or proxy in
-    # front — an added dependency. The plan excludes every one of those
-    # (§0.2.2 no error handler of any kind and no security hardening; §0.6.1
-    # and §0.6.2 one dependency and one import; §0.5.2 accepts the
-    # framework's own response headers and adds no code to suppress them),
-    # so they are recorded here and closed by an operator fronting the
-    # service, not by this file.
+    # Six further differences from the Node reference belong to the server
+    # this call selects rather than to the application. Every one is
+    # decided by the standard library's HTTP machinery, or by the
+    # development server building the environ, before WSGI dispatch — so
+    # the view never sees the request and no argument here reaches it.
+    # Each was re-measured against the running source.
+    #
+    # 1. A request line that is not exactly three tokens — one carrying a
+    # space, a quote, a raw tab or a raw carriage return — draws a 400
+    # that echoes the request line back: raw in the reason phrase, and
+    # HTML-escaped in a `text/html` body. Measured, that is a 646, 624 or
+    # 586-byte response around a 406, 392 or 373-byte body, where Node
+    # sends a bodiless 47-byte 400. The echo is bounded to the sender's
+    # own request line on the sender's own connection; it is not stored
+    # and no other client can reach it.
+    #
+    # 2. Request lines the standard library resolves as HTTP/0.9 are
+    # answered with no status line and no headers: `HTTP/9.9` draws a
+    # 340-byte error page carrying no status line, and an HTTP/0.9
+    # request line or a bare CRLF inside the target draws the 14 payload
+    # bytes alone, where Node answers a well-formed 89-byte 200. A
+    # request line of no tokens at all — a leading blank line, which
+    # RFC 9112 §2.2 says a recipient should ignore — draws nothing and
+    # the connection closes, where Node answers 200 with the payload.
+    # Carriage-return-only framing draws nothing while the client keeps
+    # its write side open, and a 357-byte status-line-free error page
+    # once it half-closes.
+    #
+    # 3. Conflicting `Content-Length` and `Transfer-Encoding: chunked` is
+    # accepted with a 200 and the payload where Node rejects the framing
+    # with a bodiless 400. It stays bounded: one response per connection,
+    # and a request smuggled after the body never reaches the access log.
+    #
+    # 4. The header reader's budget is 100 lines counting the blank
+    # terminator, so a request carrying 100 or more header fields draws
+    # `431 Too many headers` with a 333-byte body that echoes neither
+    # names nor values; 99 fields still answer the payload, and Node
+    # answers it at every count measured.
+    #
+    # 5. `Expect: 100-continue` draws two interim `100 Continue` lines,
+    # the standard library's expect handler and the environ construction
+    # each sending one, where Node sends one before the 200.
+    #
+    # 6. Every response carries `Server: Werkzeug/... Python/...`, which
+    # Node does not send.
+    #
+    # The machinery behind all six is reachable from objects this module
+    # already holds, so these are excluded rather than out of reach. A
+    # request-handler subclass suppressing the echo was measured to
+    # answer the four malformed request lines with Node's bodiless
+    # 47-byte 400 exactly — and to leave the status-line-free shapes
+    # unfixed, moving the version case from an error page to zero bytes.
+    # It is error-handling and suppression code whichever shape it takes,
+    # and §0.2.2 excludes an error handler of any kind and any hardening,
+    # §0.6.1 and §0.6.2 hold this file to one dependency and one import,
+    # and §0.5.2 accepts the framework's own responses and adds no code
+    # to suppress them — having already decided this class by declining
+    # to reproduce the source parser's rejections rather than add status
+    # paths no request asked for. So all six are recorded here and
+    # closed, where an operator needs them closed, by the server or proxy
+    # in front of this one rather than by this file.
+    #
+    # One difference is not about requests at all. This file installs no
+    # signal handling and CPython leaves an inherited `SIG_IGN` in place,
+    # so started as a background job of a non-interactive shell — where
+    # SIGINT arrives already ignored — the process keeps serving on
+    # SIGINT and stops on SIGTERM, while Node installs its own handler
+    # and exits on either. Started with the disposition at its default,
+    # both stop on SIGINT. SIGTERM stops this process in both cases;
+    # matching Node in the first would need a second import — the
+    # standard library's signal module — which §0.6.2 excludes.
     app.run(host="::", port=3000, debug=False)

@@ -1,13 +1,13 @@
 # QA Report
 
-Node `v22.23.2` [/usr/bin/node:--version]; `server.js` baseline commit `a3cb672` [.git:a3cb672].
+Node `v22.23.2` [/usr/bin/node:--version]; `server.js` baseline commit `a3cb672` [.git/packed-refs:a3cb672].
 
 ## Missing test coverage
 
-- **No test suite, and nothing invoking a runner** — the repository contains no `test`/`tests`/`__tests__`/`spec`/`e2e` directory, no `*.test.*`/`*.spec.*`/`test*.js` file and no manifest test script [.git/index:paths]; the gap is the absence of any automated check, not of a runner — Node `v22.23.2` provides `node --test` and `node:assert`, but the repository invokes neither.
-- **No runtime reproducibility anchor** — no `package.json`, lockfile, `node_modules`, `.nvmrc` or `.node-version` is present, so no `engines` pin exists [.git/index:paths].
-- **No coverage configuration** — no `.nycrc`, `.c8rc`, `codecov.yml`, `coverage/` or `lcov.info` is present [.git/index:paths]; the runtime's `--experimental-test-coverage` is available, unconfigured and uninvoked.
-- **No automated quality gate** — the repository contains no CI workflow (`.github`, `.gitlab-ci.yml`, `Jenkinsfile`, `.circleci`, `.travis.yml`), no `Makefile`/`Taskfile.yml` and no linter, formatter or type-checker config [.git/index:paths].
+- **No test suite, and nothing invoking a runner** — the repository tracks no `test`/`tests`/`__tests__`/`spec`/`e2e` directory, no `*.test.*`/`*.spec.*`/`test*.js` file and no manifest test script [.git/index:paths]; the gap is the absence of any automated check, not of a runner [/usr/bin/node:--test] — Node `v22.23.2` provides `node --test` and `node:assert`, but the repository invokes neither.
+- **No runtime reproducibility anchor** — no `package.json` (hence no `engines` pin), lockfile, `node_modules`, `.nvmrc` or `.node-version` is tracked [.git/index:paths].
+- **No coverage configuration** — no `.nycrc`, `.c8rc`, `codecov.yml`, `coverage/` or `lcov.info` is tracked, and nothing invokes coverage [.git/index:paths]; the runtime's `--experimental-test-coverage` is available [/usr/bin/node:--help].
+- **No automated quality gate** — the repository tracks no CI workflow (`.github`, `.gitlab-ci.yml`, `Jenkinsfile`, `.circleci`, `.travis.yml`), no `Makefile`/`Taskfile.yml` and no linter, formatter or type-checker config [.git/index:paths].
 - **No testing documentation** — no `TESTING.md`, `CONTRIBUTING.md`, `QA.md` or `docs/` is present; `README.md` is the bare 22-byte heading `# check_billing_sep_01`, with no run command [README.md:1].
 - **Nothing testable in process** — nothing is exported and no `require.main` guard exists [server.js:1], so loading `server.js` binds TCP 3000 and logs rather than yielding a handler; checks go over the socket.
 

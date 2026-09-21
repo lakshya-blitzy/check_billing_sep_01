@@ -10,4 +10,8 @@ app.use(morgan('combined'));
 app.all('/{*splat}', (req, res) => res.send(MESSAGE));
 
 // HOST is only advertised in the startup line; app.listen omits it to keep the original all-interfaces bind.
-app.listen(PORT).once('listening', () => console.log(`Server running at http://${HOST}:${PORT}/`));
+const server = app.listen(PORT);
+server.once('listening', () => {
+  const bound = server.address();
+  console.log(typeof bound === 'string' ? `Server running on UNIX socket ${bound}` : `Server running at http://${HOST}:${bound.port}/`);
+});

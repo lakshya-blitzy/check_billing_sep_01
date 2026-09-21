@@ -1,1 +1,5 @@
 # check_billing_sep_01
+
+Run `npm install` first, then start the service with `npm start` (or directly with `node server.js`), or under PM2 with `npx pm2 start ecosystem.config.js`; every request is logged to stdout, so give stdout a durable consumer — PM2 keeps one and restarts the app if it exits, while on the direct paths redirect to a file (`> out.log`) rather than piping, because the process exits if a piped log reader disconnects.
+
+Environment variables: `PORT` (default `3000`), `HOST` (default `127.0.0.1`, used only in the startup log line), `MESSAGE` (the response body, default `Hello, World!\n`, and trusted configuration — `res.send` serves it verbatim as `text/html`, so markup in it becomes live DOM; set it only from a trusted source); Express runs in production mode whatever `NODE_ENV` is set to, so error responses carry no stack trace, while unhandled-error traces do still reach the process stderr and PM2's error log — keep those logs on the host; the `X-Powered-By` header and the absence of security headers are accepted Express defaults here, and no request input ever reaches the response body.

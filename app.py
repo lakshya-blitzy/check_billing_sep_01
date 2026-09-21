@@ -55,4 +55,18 @@ if __name__ == "__main__":
     # the dual-stack wildcard, `port` defaults to 5000 rather than 3000, and
     # an absent `debug` is resolved from ambient process state, which an
     # explicitly passed value overrides.
+    #
+    # `debug=False` is also the limit of what this call can assert about
+    # ambient state. Within that limit it holds: measured, the reloader
+    # stays off and the line above is emitted once whatever FLASK_DEBUG
+    # holds. Outside it sits one variable belonging to the development
+    # server rather than to Flask — WERKZEUG_RUN_MAIN set to the literal
+    # "true", the marker a reloader parent leaves for its child. The
+    # server reads it before any argument given here, then expects to
+    # inherit the listener that parent had already bound, so with the
+    # marker present and no such parent it raises instead of binding.
+    # No argument reaches that read, and the two changes that would —
+    # editing the ambient values, or bypassing this call for a lower-level
+    # Werkzeug entry point — are both prohibited for this file, so the
+    # limit is recorded here rather than closed.
     app.run(host="::", port=3000, debug=False)

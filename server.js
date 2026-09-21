@@ -6,6 +6,7 @@ const HOST = process.env.HOST || '127.0.0.1';
 const MESSAGE = process.env.MESSAGE || 'Hello, World!\n';
 
 const app = express();
+app.set('env', 'production'); // Express's 'development' default makes its error pages return stack traces to clients.
 app.use(morgan('combined'));
 app.all('/{*splat}', (req, res) => res.send(MESSAGE));
 

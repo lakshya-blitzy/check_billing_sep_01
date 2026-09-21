@@ -2,6 +2,13 @@ from flask import Flask
 
 app = Flask(__name__, static_folder=None)
 
+
+class TotalPathConverter(app.url_map.converters["path"]):
+    regex = r"[^/][\s\S]*?"
+
+
+app.url_map.converters["path"] = TotalPathConverter
+
 METHODS = ("GET", "HEAD", "POST", "PUT", "DELETE", "CONNECT", "OPTIONS", "TRACE", "PATCH")
 
 
@@ -13,4 +20,4 @@ def hello(path):
 
 if __name__ == "__main__":
     print("Server running at http://127.0.0.1:3000/")
-    app.run(port=3000)
+    app.run(port=3000, debug=False, use_reloader=False)

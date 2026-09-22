@@ -28,7 +28,7 @@ Everything that gets the process listening on a known port and reporting that it
 
 **Estimate:** 2 points — a configuration read plus a default, and the startup line has to report the same value.
 
-**Acceptance:** With no port configured the service still listens on 3000; with one configured it listens on that port and the startup line names it.
+**Acceptance:** With no port configured the service still listens on 3000; with one configured it listens on that port and the startup line names it. A configured value is converted to a whole number in the valid port range before the listener is called rather than passed through as raw text; an invalid value stops startup with a clear error, and the startup line names the port actually bound.
 
 ## Request Routing
 
@@ -48,4 +48,4 @@ How a request is answered — today every path is answered identically, so the f
 
 **Estimate:** 2 points — this introduces the first branch on the request URL, so the handler stops being a constant function of its input.
 
-**Acceptance:** A request to a path other than the root returns 404 with a short not-found message, and the root path is unaffected.
+**Acceptance:** A request to a path other than the root returns 404 with a short not-found message, and the root path is unaffected. The match is made on the parsed request path rather than raw URL text, no file location is ever derived from it, and encoded slashes or dot segments count as non-root paths that also return 404.

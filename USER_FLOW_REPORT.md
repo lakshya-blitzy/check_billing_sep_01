@@ -12,7 +12,7 @@ This is a lightweight walkthrough of the trivial single-file Node.js HTTP server
 
 ## 3. Receive Request
 
-The runtime accepts the connection and parses the request line and headers before it emits the request event, so no application code has run yet — and a request its parser turns away, whether malformed, carrying an oversized header block, or with headers that never finish arriving, is answered by the runtime alone and never reaches the handler, leaving no application-side trace because nothing is logged per request [server.js:1]. A fresh connection also pays setup cost that a reused keep-alive connection avoids, and a socket left idle past its window has already been closed by the runtime, so a caller that comes back to it has to reconnect first.
+The runtime accepts the connection and parses the request line and headers before it emits the request event, so no application code has run yet; a request its parser rejects as malformed or oversized is answered by the runtime alone and never reaches the handler.
 
 ## 4. Handler Runs
 
@@ -20,6 +20,6 @@ The handler runs on the request event, reads nothing at all from the request —
 
 ## 5. Response Sent
 
-That `res.end` call hands the body to the runtime, which supplies the entire status line and header block because the handler sets neither a status nor a header [server.js:1] — a `200` with `Date`, `Content-Length: 14` and keep-alive headers, the 14-byte body, and no `Content-Type`, which a caller relying on media-type negotiation has to tolerate. If the caller has already disconnected the write is discarded and the process carries on serving others, while stopping the process releases the port immediately and cuts off anything still in flight.
+That `res.end` call hands the body to the runtime, which supplies the entire status line and header block because the handler sets neither a status nor a header [server.js:1] — a `200` with `Date`, `Content-Length: 14` and keep-alive headers, the 14-byte body, and no `Content-Type`, which a caller relying on media-type negotiation has to tolerate.
 
-Confirmed by running it during this work: the process started on the Node.js already installed in this environment, printed its readiness line, and answered the traced `GET` with `200` and the unchanged 14-byte body.
+A confirming run showed the server starting on the Node.js already installed in this environment, printing its readiness line, and answering the traced `GET` with `200` and the unchanged 14-byte body.

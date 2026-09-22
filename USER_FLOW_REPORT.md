@@ -12,7 +12,7 @@ This is a lightweight walkthrough of the trivial single-file Node.js HTTP server
 
 ## 3. Receive Request
 
-The runtime accepts the connection and parses the request line and headers before it emits the request event, so no application code has run yet — and a request its parser turns away, whether malformed, carrying an oversized header block, or with headers that never finish arriving, is answered by the runtime alone and never reaches the handler, leaving no application-side trace because nothing is logged per request. A fresh connection also pays setup cost that a reused keep-alive connection avoids, and a socket left idle past its window has already been closed by the runtime, so a caller that comes back to it has to reconnect first.
+The runtime accepts the connection and parses the request line and headers before it emits the request event, so no application code has run yet — and a request its parser turns away, whether malformed, carrying an oversized header block, or with headers that never finish arriving, is answered by the runtime alone and never reaches the handler, leaving no application-side trace because nothing is logged per request [server.js:1]. A fresh connection also pays setup cost that a reused keep-alive connection avoids, and a socket left idle past its window has already been closed by the runtime, so a caller that comes back to it has to reconnect first.
 
 ## 4. Handler Runs
 

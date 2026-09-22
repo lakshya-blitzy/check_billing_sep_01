@@ -1,6 +1,6 @@
 # Hello World Service Backlog
 
-This backlog decomposes the Hello World HTTP service in this repository — a single Node.js listener, built on the standard-library `http` module, that binds port 3000 and answers every request with the same greeting.
+This backlog decomposes the Hello World HTTP service in this repository — a single Node.js listener, built on the standard-library `http` module, that binds port 3000 and uses the same greeting handler for every request.
 
 ## Server Setup
 
